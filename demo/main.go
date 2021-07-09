@@ -57,7 +57,7 @@ func main() {
 
 	// 读取数据
 	sortData := make([]*User, 0, 1000)
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 2; i++ {
 		filePath := fmt.Sprintf("./demo/data/data%d.json", i)
 		ReadData(filePath, sortData)
 	}
@@ -119,10 +119,13 @@ func ReadData(filePath string, sortData []*User) {
 			score += 300
 		}
 		userInfo.Score = score
-		if len(sortData) < 1000 {
+		if len(sortData) < 1 {
 			sortData = append(sortData, userInfo)
 		}
 		InsertSort(sortData, userInfo)
+	}
+	for _, datum := range sortData {
+		fmt.Println(*datum)
 	}
 }
 
@@ -136,12 +139,19 @@ func InsertSort(data []*User, user *User) {
 				j--
 				continue
 			}
-
-			data[j] = data[j-1]
+			if j >= len(data) {
+				data = append(data, data[j-1])
+			} else {
+				data[j] = data[j-1]
+			}
 			j--
 		}
 		if j < 1000 {
-			data[j] = insert
+			if j >= len(data) {
+				data = append(data, insert)
+			} else {
+				data[j] = insert
+			}
 		}
 	}
 }
