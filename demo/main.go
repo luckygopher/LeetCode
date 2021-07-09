@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -15,9 +17,11 @@ type User struct {
 	Id int64 `json:"id"`
 	// 用户姓名
 	Name string `json:"name"`
+	// 积分
+	Score int64 `json:"score"`
 	// 父母是否参与火星研究
 	ParentMarsResearch bool `json:"parent_mars_research"`
-	// 总年纳税(单位:w)
+	// 总年纳税
 	AnnualTax int64 `json:"annual_tax"`
 	// 是否有犯罪记录
 	CriminalRecord bool `json:"criminal_record"`
@@ -37,8 +41,8 @@ type User struct {
 
 func main() {
 	// 生成数据
-	// ch := make(chan struct{}, 100)
-	// endCh := make(chan struct{}, 100)
+	// ch := make(chan struct{}, 10)
+	// endCh := make(chan struct{}, 10)
 	// defer close(ch)
 	// defer close(endCh)
 	// for i := 0; i < 1000; i++ {
@@ -52,7 +56,12 @@ func main() {
 	// fmt.Println("write data end")
 
 	// 读取数据
-
+	sortData := make([]*User, 0, 1000)
+	for i := 0; i < 1; i++ {
+		filePath := fmt.Sprintf("./demo/data/data%d.json", i)
+		ReadData(filePath, sortData)
+	}
+	fmt.Println(sortData)
 }
 
 func WriteData(filePath string, ch, endCh chan struct{}) {
@@ -65,11 +74,11 @@ func WriteData(filePath string, ch, endCh chan struct{}) {
 	writer := bufio.NewWriter(file)
 	randData := []bool{true, false}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	user := make([]*User, 0, 1000000)
 	for j := 0; j < 1000000; j++ {
-		user = append(user, &User{
+		data, _ := json.Marshal(User{
 			Id:                 r.Int63(),
 			Name:               "aaa",
+			Score:              0,
 			ParentMarsResearch: randData[r.Intn(2)],
 			AnnualTax:          r.Int63n(2000000),
 			CriminalRecord:     randData[r.Intn(2)],
@@ -77,94 +86,62 @@ func WriteData(filePath string, ch, endCh chan struct{}) {
 			Engineer:           randData[r.Intn(2)],
 			Time:               time.Now().Unix(),
 		})
+		dataStr := fmt.Sprintf("%s\n", string(data))
+		writer.WriteString(dataStr)
 	}
-	data, _ := json.Marshal(user)
-	writer.Write(data)
 	writer.Flush()
 	endCh <- struct{}{}
 }
 
-// 小顶堆
-type Node struct {
-	Value int
-}
-
-// 用于构建结构体切片为最小堆，需要调用down函数
-func Init(nodes []Node) {
-	for i := len(nodes)/2 - 1; i >= 0; i-- {
-		down(nodes, i, len(nodes))
+func ReadData(filePath string, sortData []*User) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalf("read file err%v", err)
 	}
-}
-
-// 需要down(下沉)的元素在切片中的索引为i，n为heap的长度，将该元素下沉到该元素
-// 对应的子树合适的位置，从而满足该子树为最小堆的要求
-func down(nodes []Node, i, n int) {
-	parent := i
-	child := 2*parent + 1
-	temp := nodes[parent].Value
+	defer file.Close()
+	reader := bufio.NewReader(file)
 	for {
-		if child < n {
-			if child+1 < n && nodes[child].Value > nodes[child+1].Value {
-				child++
+		userInfo := new(User)
+		str, err := reader.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		json.Unmarshal([]byte(str), userInfo)
+		// 计算积分
+		var score int64
+		if userInfo.ParentMarsResearch {
+			score += 500
+		}
+		if userInfo.Engineer {
+			score += 200
+		}
+		if userInfo.AnnualTax > 1000000 && userInfo.CriminalRecord && userInfo.BrothersAndSisters {
+			score += 300
+		}
+		userInfo.Score = score
+		if len(sortData) < 1000 {
+			sortData = append(sortData, userInfo)
+		}
+		InsertSort(sortData, userInfo)
+	}
+}
+
+//插入排序
+func InsertSort(data []*User, user *User) {
+	for i := 1; i <= len(data); i++ {
+		insert := user
+		j := i
+		for j > 0 && (data[j-1].Score < insert.Score || (data[j-1].Score == insert.Score && data[j-1].Time > insert.Time)) {
+			if j >= 1000 {
+				j--
+				continue
 			}
-			if temp <= nodes[child].Value {
-				break
-			}
-			nodes[parent].Value = nodes[child].Value
-			parent = child
-			child = child*2 + 1
-		} else {
-			break
+
+			data[j] = data[j-1]
+			j--
+		}
+		if j < 1000 {
+			data[j] = insert
 		}
 	}
-	nodes[parent].Value = temp
-}
-
-// 用于保证插入新元素(j为元素的索引，切片末尾插入，堆低插入)的结构体切片之后仍然是一个最小堆
-func up(nodes []Node, j int) {
-	child := j
-	parent := (j - 1) / 2
-	for {
-		if child == 0 {
-			break
-		}
-		if nodes[parent].Value < nodes[child].Value {
-			break
-		}
-		temp := nodes[child].Value
-		nodes[child].Value = nodes[parent].Value
-		nodes[parent].Value = temp
-		child = parent
-		parent = (parent - 1) / 2
-	}
-}
-
-// 弹出最小元素，并保证弹出后的结构体切片仍然是一个最小堆，第一个返回值是弹出的节点的信息，
-// 第二个参数是Pop操作后得到的新的结构体切片
-func Pop(nodes []Node) (Node, []Node) {
-	min := nodes[0]
-	nodes[0].Value = nodes[len(nodes)-1].Value
-	nodes = nodes[:len(nodes)-1]
-	down(nodes, 0, len(nodes)-1)
-	return min, nodes
-}
-
-// 保证插入新元素时，结构体切片仍然是一个最小堆，需要调用up函数
-func Push(node Node, nodes []Node) []Node {
-	nodes = append(nodes, node)
-	up(nodes, len(nodes)-1)
-	return nodes
-}
-
-// 移除切片中指定索引的元素，保证移除后结构体切片仍然是一个最小堆
-func Remove(nodes []Node, node Node) []Node {
-	for i := 0; i < len(nodes); i++ {
-		if node.Value == nodes[i].Value {
-			nodes[i].Value = nodes[len(nodes)-1].Value
-			nodes = nodes[0 : len(nodes)-1]
-			down(nodes, 0, len(nodes)-1)
-			break
-		}
-	}
-	return nodes
 }
