@@ -35,10 +35,9 @@ type User struct {
 
 // 思路
 // 1、构造用户数据，10亿数据拆分为1000个小文件存储，一个文件100万，每行一条数据
-// 2、读取文件，计算积分并构建1000个节点的小顶堆
-// 3、弹出最低位，得出每个文件的前1000
-// 4、将每个文件的1000进行排序
+// 2、读取文件，计算积分，使用淘汰插排
 
+// 目前实现还有问题，跑出来数据没对
 func main() {
 	// 生成数据
 	// ch := make(chan struct{}, 10)
@@ -46,12 +45,12 @@ func main() {
 	// defer close(ch)
 	// defer close(endCh)
 	// for i := 0; i < 1000; i++ {
-	// 	ch <- struct{}{}
-	// 	filePath := fmt.Sprintf("./demo/data/data%d.json", i)
-	// 	go WriteData(filePath, ch, endCh)
+	//  ch <- struct{}{}
+	//  filePath := fmt.Sprintf("./demo/data/data%d.json", i)
+	//  go WriteData(filePath, ch, endCh)
 	// }
 	// for i := 0; i < 1000; i++ {
-	// 	<-endCh
+	//  <-endCh
 	// }
 	// fmt.Println("write data end")
 
@@ -59,9 +58,11 @@ func main() {
 	sortData := make([]*User, 0, 1000)
 	for i := 0; i < 2; i++ {
 		filePath := fmt.Sprintf("./demo/data/data%d.json", i)
-		ReadData(filePath, sortData)
+		ReadData(filePath, &sortData)
 	}
-	fmt.Println(sortData)
+	for _, datum := range sortData {
+		fmt.Println(*datum)
+	}
 }
 
 func WriteData(filePath string, ch, endCh chan struct{}) {
@@ -93,7 +94,7 @@ func WriteData(filePath string, ch, endCh chan struct{}) {
 	endCh <- struct{}{}
 }
 
-func ReadData(filePath string, sortData []*User) {
+func ReadData(filePath string, sortData *[]*User) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatalf("read file err%v", err)
@@ -119,38 +120,35 @@ func ReadData(filePath string, sortData []*User) {
 			score += 300
 		}
 		userInfo.Score = score
-		if len(sortData) < 1 {
-			sortData = append(sortData, userInfo)
+		if len(*sortData) < 1 {
+			*sortData = append(*sortData, userInfo)
 		}
 		InsertSort(sortData, userInfo)
-	}
-	for _, datum := range sortData {
-		fmt.Println(*datum)
 	}
 }
 
 //插入排序
-func InsertSort(data []*User, user *User) {
-	for i := 1; i <= len(data); i++ {
+func InsertSort(data *[]*User, user *User) {
+	for i := 1; i <= len(*data); i++ {
 		insert := user
 		j := i
-		for j > 0 && (data[j-1].Score < insert.Score || (data[j-1].Score == insert.Score && data[j-1].Time > insert.Time)) {
+		for j > 0 && ((*data)[j-1].Score < insert.Score || ((*data)[j-1].Score == insert.Score && (*data)[j-1].Time > insert.Time)) {
 			if j >= 1000 {
 				j--
 				continue
 			}
-			if j >= len(data) {
-				data = append(data, data[j-1])
+			if j >= len(*data) {
+				*data = append(*data, (*data)[j-1])
 			} else {
-				data[j] = data[j-1]
+				(*data)[j] = (*data)[j-1]
 			}
 			j--
 		}
 		if j < 1000 {
-			if j >= len(data) {
-				data = append(data, insert)
+			if j >= len(*data) {
+				*data = append(*data, insert)
 			} else {
-				data[j] = insert
+				(*data)[j] = insert
 			}
 		}
 	}
