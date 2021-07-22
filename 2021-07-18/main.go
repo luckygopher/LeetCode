@@ -46,7 +46,7 @@ func main() {
 	// defer close(endCh)
 	// for i := 0; i < 1000; i++ {
 	//  ch <- struct{}{}
-	//  filePath := fmt.Sprintf("./demo/data/data%d.json", i)
+	//  filePath := fmt.Sprintf("./2021-07-18/data/data%d.json", i)
 	//  go WriteData(filePath, ch, endCh)
 	// }
 	// for i := 0; i < 1000; i++ {
@@ -57,7 +57,7 @@ func main() {
 	// 读取数据
 	sortData := make([]*User, 0, 1000)
 	for i := 0; i < 2; i++ {
-		filePath := fmt.Sprintf("./demo/data/data%d.json", i)
+		filePath := fmt.Sprintf("./2021-07-18/data/data%d.json", i)
 		ReadData(filePath, &sortData)
 	}
 	for _, datum := range sortData {
