@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	list := []int{1, 4, 9, 16, 25}
+	list := []int{2, 14, 64, 202, 502, 1062, 2004}
 	val, ok := checkList(list)
 	fmt.Println(val, ok)
 }
@@ -20,66 +20,96 @@ func checkList(list []int) (val int, ok bool) {
 	if len(list) < 3 {
 		return
 	}
+	var a1, a2, a3 []int
 	// 等差数列
-	if val, ok = equalDifferenceSeq(list); ok {
+	a1, val, ok = equalDifferenceSeq(list)
+	if ok {
 		return
 	}
 	// 等比数列
-	if val, ok = equalRatioSeq(list); ok {
+	a2, val, ok = equalRatioSeq(list)
+	if ok {
 		return
 	}
 	// 开方等差数列
-	if val, ok = squareArithmeticSeq(list); ok {
+	a3, val, ok = squareArithmeticSeq(list)
+	if ok {
 		return
 	}
 
+	val, ok = checkList(a1)
+	if ok {
+		val += list[len(list)-1]
+		return
+	}
+
+	val, ok = checkList(a2)
+	if ok {
+		val *= list[len(list)-1]
+		return
+	}
+
+	val, ok = checkList(a3)
+	if ok {
+		val = int(math.Pow(float64(val+list[len(list)-1]), 2))
+		return
+	}
 	return
 }
 
 // 等差:等差数列是指从第二项起，每一项与它的前一项的差等于同一个常数的一种数列
-func equalDifferenceSeq(list []int) (int, bool) {
-	for i := 0; i < len(list)-2; i++ {
-		d1 := list[i+1] - list[i]
-		d2 := list[i+2] - list[i+1]
-		if d1 != d2 {
-			return 0, false
+func equalDifferenceSeq(list []int) ([]int, int, bool) {
+	newList := make([]int, 0, len(list)-1)
+	for i := 0; i < len(list)-1; i++ {
+		d := list[i+1] - list[i]
+		newList = append(newList, d)
+	}
+	for i := 0; i < len(newList)-1; i++ {
+		if newList[i] != newList[i+1] {
+			return newList, 0, false
 		}
 	}
-	n := list[len(list)-1] + (list[len(list)-1] - list[len(list)-2])
-	return n, true
+
+	return newList, list[len(list)-1] + newList[0], true
 }
 
 // 等比:等比数列是指从第二项起，每一项与它的前一项的比值等于同一个常数的一种数列
-func equalRatioSeq(list []int) (int, bool) {
-	for i := 0; i < len(list)-2; i++ {
-		if list[i] == 0 || list[i+1] == 0 || list[i+2] == 0 {
-			return 0, false
+func equalRatioSeq(list []int) ([]int, int, bool) {
+	newList := make([]int, 0, len(list)-1)
+	for i := 0; i < len(list)-1; i++ {
+		if list[i] == 0 {
+			return []int{}, 0, false
 		}
-		d1 := float64(list[i+1]) / float64(list[i])
-		d2 := float64(list[i+2]) / float64(list[i+1])
-		if d1 != d2 || math.Remainder(d1, float64(1)) != 0 {
-			return 0, false
+		d := float64(list[i+1]) / float64(list[i])
+		if math.Remainder(d, float64(1)) != 0 {
+			return []int{}, 0, false
+		}
+		newList = append(newList, int(d))
+	}
+
+	for i := 0; i < len(newList)-1; i++ {
+		if newList[i] != newList[i+1] {
+			return newList, 0, false
 		}
 	}
-	n := list[len(list)-1] * (list[len(list)-1] / list[len(list)-2])
-	return n, true
+	return newList, list[len(list)-1] * newList[0], true
 }
 
 // 开方等差数列:
 // 如果一个数列可以对每一项开根号（比如负数，则认为不可以开根号，再比如3，开根号无法得到整数，
 // 也认为不可以开根号）并且得到的新的整数数列是等差数列，那么他就是开方等差数列
-func squareArithmeticSeq(list []int) (int, bool) {
+func squareArithmeticSeq(list []int) ([]int, int, bool) {
 	equalDiff := make([]int, 0, len(list))
 	for i := 0; i < len(list); i++ {
 		d := math.Sqrt(float64(list[i]))
 		if math.IsNaN(d) || math.Remainder(d, 1) != 0 {
-			return 0, false
+			return []int{}, 0, false
 		}
 		equalDiff = append(equalDiff, int(d))
 	}
-	val, ok := equalDifferenceSeq(equalDiff)
+	ls, val, ok := equalDifferenceSeq(equalDiff)
 	if !ok {
-		return 0, false
+		return ls, 0, false
 	}
-	return int(math.Pow(float64(val), 2)), true
+	return ls, int(math.Pow(float64(val), 2)), true
 }
