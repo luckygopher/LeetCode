@@ -7,7 +7,7 @@ import (
 
 func main() {
 	list := []int{2, 14, 64, 202, 502, 1062, 2004}
-	val, ok := checkList(list)
+	val, ok := CheckList(list)
 	fmt.Println(val, ok)
 }
 
@@ -15,7 +15,7 @@ func main() {
 // 比如 输入 []int{1,3,5,7,9} ，检测出它是等差数列，输出下一项的值 11 和找到了规律 true
 // 输入数列的长度小于3时，作 无规律处理。比如：[1,3]判定无规律。[1,3,5]判定为等差数列
 // 不用考虑int计算的溢出问题
-func checkList(list []int) (val int, ok bool) {
+func CheckList(list []int) (val int, ok bool) {
 	// 处理数列长度小于3的情况
 	if len(list) < 3 {
 		return
@@ -37,19 +37,19 @@ func checkList(list []int) (val int, ok bool) {
 		return
 	}
 
-	val, ok = checkList(a1)
+	val, ok = CheckList(a1)
 	if ok {
 		val += list[len(list)-1]
 		return
 	}
 
-	val, ok = checkList(a2)
+	val, ok = CheckList(a2)
 	if ok {
 		val *= list[len(list)-1]
 		return
 	}
 
-	val, ok = checkList(a3)
+	val, ok = CheckList(a3)
 	if ok {
 		val = int(math.Pow(float64(val+list[len(list)-1]), 2))
 		return
